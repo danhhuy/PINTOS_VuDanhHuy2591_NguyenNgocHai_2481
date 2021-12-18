@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "userprog/syscall.h"
 
 #ifdef VM
 #include "vm/page.h"
@@ -107,21 +108,6 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-
-    // Project 2: file descriptors and process table
-    /* Owned by userprog/process.c and userprog/syscall.c */
-
-    struct process_control_block *pcb;  /* Process Control Block */
-    struct list child_list;             /* List of children processes of this thread,
-                                          each elem is defined by pcb#elem */
-
-    struct list file_descriptors;       /* List of file_descriptors the thread contains */
-
-    struct file *executing_file;        /* The executable file of associated process. */
-
-    uint8_t *current_esp;               /* The current value of the user program’s stack pointer.
-                                           A page fault might occur in the kernel, so we might
-                                           need to store esp on transition to kernel mode. (4.3.3) */
 #endif
 
 #ifdef VM
@@ -137,6 +123,17 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+   // for sys calls
+    struct list file_list;      // list of files
+    int fd;                     // file descriptor
+    
+    struct list child_list;     // list of child processes
+    tid_t parent;               // id of the parent
+    
+    struct child_process* cp;   // point to child process
+    struct file* executable;    // use for denying writes to executables
+    struct list lock_list;      // use to keep track of locks the thread holds
   };
 
 /* If false (default), use round-robin scheduler.
@@ -178,4 +175,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+int is_thread_alive (int pid);
+struct child_process* add_child_process (int pid);
+void thread_release_locks(void);
 #endif /* threads/thread.h */
