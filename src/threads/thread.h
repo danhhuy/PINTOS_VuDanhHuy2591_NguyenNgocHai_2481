@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include "userprog/syscall.h"
 
+
+
 #ifdef VM
 #include "vm/page.h"
 #endif
@@ -18,6 +20,20 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
+
+struct wait_status 
+{
+    struct list_elem elem;            //children list
+    struct lock lock;                 //lock to protect ref_cnt
+    int ref_cnt;                      /* 2 = child and parent both alive,
+                                         1 = either child or parent alive,
+                                         0 = child and parent both dead. 
+                                         parent can access child's*/
+    tid_t tid;                        /* Child thread id. */
+    int exit_code;                    /* Child exit code, if dead. */
+    struct semaphore dead;            /* 0 = child alive,
+                                          1 = child dead. */
+};
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
@@ -124,16 +140,13 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-   // for sys calls
-    struct list file_list;      // list of files
-    int fd;                     // file descriptor
-    
-    struct list child_list;     // list of child processes
-    tid_t parent;               // id of the parent
-    
-    struct child_process* cp;   // point to child process
-    struct file* executable;    // use for denying writes to executables
-    struct list lock_list;      // use to keep track of locks the thread holds
+       //ADDED
+    struct wait_status *wait_status;    /* This process’s wait state. */
+    struct list children;               /* A list of wait status of children. */
+    bool load_success;                  /* True = load successfully,
+                                         False = load unsuccessfully. */
+    struct semaphore child_load_sema;          /* Semaphore to make sure child has finished loading */
+    struct semaphore parent_check_load_sema;   /* Semaphore to make sure parent has checked child's status*/
   };
 
 /* If false (default), use round-robin scheduler.
@@ -178,4 +191,8 @@ int thread_get_load_avg (void);
 int is_thread_alive (int pid);
 struct child_process* add_child_process (int pid);
 void thread_release_locks(void);
+
+struct thread *get_thread_by_tid(tid_id tid); //Lấy con trỏ trỏ vào thread bằng thread id
+void wait_status_init(struct wait_status*, tid_id tid); //Khai báo hàm khởi tạo trạng thái đợi của thread tương ứng 
+
 #endif /* threads/thread.h */

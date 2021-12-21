@@ -608,17 +608,11 @@ init_thread (struct thread *t, const char *name, int priority)
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
 
-#ifdef USERPROG
-  // init process-related informations.
-  list_push_back (&all_list, &t->allelem);
-	list_init(&t->file_list);
-  t->fd = 2;                  // minimum file descriptor is 2
-  list_init(&t->child_list);
-  t->cp = NULL;               //children of parent is null at the start
-  t->parent = -1;             // there is no parent yet
-  list_init(&t->lock_list);
-  t->executable = NULL;
-#endif
+  wait_status_init(&t->wait_status, t->tid);
+  list_init(&t->children);
+  sema_init(&t->child_load_sema, 0);
+  sema_init(&parent_check_load_sema, 0);
+
 #ifdef VM
   list_init(&t->mmap_list);
 #endif
@@ -803,3 +797,12 @@ thread_release_locks (void)
     list_remove(&lock_ptr->lockelem);
   }
 }
+
+struct  thread *get_thread_by_tid (tid_t  tiid){} 
+void wait_status_init (struct wait_status *ws,  tid_t  tid){ 
+  lock_init (&ws -> lock); 
+  ws->ref_cnt  = 2 
+  ws->tid = tid; 
+  ws->exit_code  NULL; 
+  sema_init (&ws -> dead,  0) 
+} 
